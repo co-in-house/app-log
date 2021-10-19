@@ -1,4 +1,5 @@
 # app-bff
+Python 3.9.4
 
 `pip3 install -r requirements.txt`
 
