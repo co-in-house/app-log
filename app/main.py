@@ -1,7 +1,9 @@
 import logging
 import os
 import traceback
+from datetime import datetime
 
+from dateutil import tz
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -36,13 +38,13 @@ db_session = SessionLocal()
 
 # DTO Logクラス作成
 class Log(Base):
-    __tablename__ = "log_test"
-
+    __tablename__ = "log"
+    __table_args__ = {"schema": "inhouse"}
     #     __tablename__ = 'inhouse.log'
     log_id = Column(Integer, primary_key=True, nullable=False, index=True)
-    community_id = Column(Integer, unique=True, nullable=False, index=True)
+    community_id = Column(Integer, unique=False, nullable=False, index=True)
     message = Column(String, unique=False, nullable=False, index=True)
-    created = Column(DateTime, nullable=True, server_default=current_timestamp())
+    created = Column(DateTime, nullable=True)
 
     def to_json(self):
         result = self.__dict__.copy()
@@ -81,9 +83,19 @@ def insert_log(item: RequestItem):
         )
     # DB アクセス
     try:
-        last_id = db_session.query(Log).order_by(Log.log_id.desc()).first().log_id
+        if len(db_session.query(Log).all()) == 0:
+            last_id = -1
+        else:
+            last_id = db_session.query(Log).order_by(Log.log_id.desc()).first().log_id
         db_session.execute(
-            Log.__table__.insert([last_id + 1, item.communityId, item.message])
+            Log.__table__.insert(
+                [
+                    last_id + 1,
+                    item.communityId,
+                    item.message,
+                    datetime.now(tz=tz.gettz("Asia/Tokyo")),
+                ]
+            )
         )
         db_session.commit()
     except Exception as e:
